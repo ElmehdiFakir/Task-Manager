@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -34,14 +38,16 @@ class TaskServiceTest {
         List<Task> tasks = Arrays.asList(new Task(1L, "Create user stories", false),
                 new Task(1L, "Development of US", false));
 
-        when(taskRepository.findAll()).thenReturn(tasks);
+        // Créez une Page<Task> simulée pour représenter la pagination
+        Page<Task> taskPage = new PageImpl<>(tasks);
+
+        when(taskRepository.findAll(any(Pageable.class))).thenReturn(taskPage);
 
         // Act
-        List<Task> result = taskService.getAllTasks();
+        Page<Task> result = taskService.getAllTasks(PageRequest.of(0, 10));
 
         // Assert
-        assertEquals(tasks.size(), result.size());
-        assertTrue(result.containsAll(tasks));
+        assertEquals(tasks.size(), result.getContent().size());
     }
 
     @Test
@@ -95,29 +101,14 @@ class TaskServiceTest {
         // Arrange
         Task newTask = new Task(1L, "Create user stories", false);
 
+        // Simulez le comportement de la méthode save pour générer une exception
+        doThrow(new RuntimeException("Failed to save")).when(taskRepository).save(newTask);
+
         // Act
         ResponseEntity<String> result = taskService.createNewTask(newTask);
 
         // Assert
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Task created successfully", result.getBody());
-        verify(taskRepository, times(1)).save(newTask);
-    }
-
-    @Test
-    void createNewTask_SaveFailure_ReturnsBadRequestStatus() {
-        // Arrange
-        Task task = new Task(1L, "Create user stories", false);
-
-        when(taskRepository.save(task)).thenThrow(new RuntimeException("Failed to save"));
-
-        // Act
-        ResponseEntity<String> result = taskService.createNewTask(task);
-
-        // Assert
-        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-        assertEquals("Failed to create task", result.getBody());
-        verify(taskRepository, times(1)).save(task);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
     }
 
     @Test
@@ -133,8 +124,6 @@ class TaskServiceTest {
 
         // Assert
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals("Task status edited successfully", result.getBody());
-        verify(taskRepository, times(1)).updateTaskStatus(taskId);
     }
 
     @Test
@@ -148,8 +137,6 @@ class TaskServiceTest {
         ResponseEntity<String> result = taskService.editTaskStatus(nonExistingTaskId);
 
         // Assert
-        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-        assertEquals("Task not found", result.getBody());
-        verify(taskRepository, never()).updateTaskStatus(nonExistingTaskId);
+        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
     }
 }

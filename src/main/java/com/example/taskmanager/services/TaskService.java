@@ -3,6 +3,8 @@ package com.example.taskmanager.services;
 
 import com.example.taskmanager.entities.Task;
 import com.example.taskmanager.repositories.TaskRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,8 +22,8 @@ public class TaskService {
         this.taskRepository = taskRepository;
     }
 
-    public List<Task> getAllTasks() {
-        return taskRepository.findAll();
+    public Page<Task> getAllTasks(Pageable pageable) {
+        return taskRepository.findAll(pageable);
 
     }
 
@@ -39,8 +41,13 @@ public class TaskService {
 
     public ResponseEntity<String> createNewTask(Task task) {
 
+        try {
             taskRepository.save(task);
-            return new ResponseEntity<>(HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
     @Transactional
@@ -48,10 +55,12 @@ public class TaskService {
         Optional<Task> fetchedTask = taskRepository.findById(id);
 
         if (fetchedTask.isPresent()) {
-            taskRepository.updateTaskStatus(id);
-            return new ResponseEntity<>("Status edited successfully", HttpStatus.OK);
+            Task taskToUpdate = fetchedTask.get();
+            taskToUpdate.setCompleted(true);
+            taskRepository.save(taskToUpdate);
+            return new ResponseEntity<>(HttpStatus.OK);
         } else {
-            return new ResponseEntity<>("Task not found", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 }

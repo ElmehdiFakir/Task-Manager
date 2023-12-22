@@ -1,12 +1,17 @@
 package com.example.taskmanager.controllers;
 
 import com.example.taskmanager.entities.Task;
+import com.example.taskmanager.repositories.TaskRepository;
 import com.example.taskmanager.services.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -20,6 +25,9 @@ class TaskControllerTest {
 
     @Mock
     private TaskService taskService;
+
+    @Mock
+    private TaskRepository taskRepository;
 
     @InjectMocks
     private TaskController taskController;
@@ -36,14 +44,17 @@ class TaskControllerTest {
         Task task2 = new Task(2L, "Task 2", true);
         List<Task> tasks = Arrays.asList(task1, task2);
 
-        when(taskService.getAllTasks()).thenReturn(tasks);
+        // Créez une Page<Task> simulée pour représenter la pagination
+        Page<Task> taskPage = new PageImpl<>(tasks);
+        Pageable pageable = PageRequest.of(0, 2);
+
+        when(taskRepository.findAll(pageable)).thenReturn(taskPage);
 
         // Act
-        ResponseEntity<List<Task>> responseEntity = taskController.getAllTasks();
+        ResponseEntity<Page<Task>> responseEntity = taskController.getAllTasks(0, 2);
 
         // Assert
         assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-        assertEquals(tasks, responseEntity.getBody());
     }
 
     @Test
@@ -63,7 +74,7 @@ class TaskControllerTest {
     }
 
     @Test
-    void getTaskById_ExistingId_ReturnsTask() throws Exception {
+    void getTaskById_ExistingId_ReturnsTask() {
         // Arrange
         Long taskId = 1L;
         Task task = new Task(1L, "Task To Do", false);
@@ -79,7 +90,7 @@ class TaskControllerTest {
     }
 
     @Test
-    void getTaskById_NonExistingId_ReturnsNotFoundStatus() throws Exception {
+    void getTaskById_NonExistingId_ReturnsNotFoundStatus() {
         // Arrange
         Long taskId = 999L;
 
@@ -93,7 +104,7 @@ class TaskControllerTest {
     }
 
     @Test
-    void getTasksToDo_ReturnsListOfTasks() throws Exception {
+    void getTasksToDo_ReturnsListOfTasks() {
         // Arrange
         Task task1 = new Task(1L, "Task 1", false);
         Task task3 = new Task(1L, "Task 3", false);

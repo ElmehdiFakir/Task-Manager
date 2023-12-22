@@ -2,6 +2,9 @@ package com.example.taskmanager.controllers;
 
 import com.example.taskmanager.entities.Task;
 import com.example.taskmanager.services.TaskService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,14 +23,18 @@ public class TaskController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<Task>> getAllTasks() {
+    public ResponseEntity<Page<Task>> getAllTasks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
 
-        List<Task> tasks = taskService.getAllTasks();
+        Pageable pageable = PageRequest.of(page, pageSize);
+        Page<Task> tasks = taskService.getAllTasks(pageable);
+
         return new ResponseEntity<>(tasks, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity getTaskById(@PathVariable Long id) {
+    public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
 
         Task task = taskService.getTaskById(id);
 
